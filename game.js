@@ -382,8 +382,8 @@ function endRun(reason) {
 }
 
 function trySpawnBatman() {
-  if (game.batman || game.batmanCooldown > 0) return;
-  if (rand(performance.now() + getAltitude() * 17) >= 0.02) return;
+  if (game.batman || game.batmanCooldown > 0 || getAltitude() < 200) return;
+  if (rand(performance.now() + getAltitude() * 17) >= 0.01) return;
   const direction = rand(performance.now() + 31) > 0.5 ? 1 : -1;
   game.batman = {
     x: direction > 0 ? -70 : W + 28,
@@ -393,7 +393,7 @@ function trySpawnBatman() {
     vx: direction * 430,
     direction,
     flap: 0,
-    guaranteed: true
+    guaranteed: false
   };
   audio.beep(96, 0.18, "sawtooth", 0.03);
 }
