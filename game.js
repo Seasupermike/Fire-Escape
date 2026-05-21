@@ -137,6 +137,7 @@ function reset() {
       coyote: 0,
       invincible: 0,
       height: 0,
+      bestRunHeight: 0,
       knockedOff: false,
       health: healthSetting,
       maxHealth: healthSetting
@@ -366,7 +367,7 @@ function startRun() {
 function endRun(reason) {
   if (gameOverHandled) return;
   gameOverHandled = true;
-  const height = getAltitude();
+  const height = game.player.bestRunHeight;
   bestHeight = Math.max(bestHeight, height);
   saveBestHeight(bestHeight);
   game.state = "gameover";
@@ -820,7 +821,8 @@ function update(dt) {
   game.messageTimer = Math.max(0, game.messageTimer - dt);
 
   const alt = getAltitude();
-  bestHeight = Math.max(bestHeight, alt);
+  game.player.bestRunHeight = Math.max(game.player.bestRunHeight, alt);
+  bestHeight = Math.max(bestHeight, game.player.bestRunHeight);
   saveBestHeight(bestHeight);
   heightEl.textContent = `${alt}ft`;
   bestEl.textContent = `${bestHeight}ft`;
