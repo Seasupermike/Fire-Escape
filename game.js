@@ -11,10 +11,9 @@ const muteButton = document.querySelector("#mute");
 
 const W = 480;
 const H = 270;
-const keys = new Set();
 const gravity = 0.42;
 const platformGap = 78;
-const rngSeed = 7321;
+let rngSeed = getRandomNumber(1000, 9999);
 
 let muted = false;
 let cameraY = 0;
@@ -109,6 +108,13 @@ function rand(n) {
   return x - Math.floor(x);
 }
 
+function randomChance(chance) {
+    if (getRandomNumber(0, 100) <= chance) {
+        return true;
+    }
+    return false;
+}
+
 function reset() {
   const startPlatform = { x: 162, y: 220, w: 156, h: 9, kind: "street" };
   gameOverHandled = false;
@@ -176,6 +182,11 @@ function reset() {
   cameraY = 0;
   ensurePlatforms();
   updateHealthControls();
+  do {
+    var temp = getRandomNumber(1000, 9999)
+  } while (temp == rngSeed)
+  rngSeed = temp;
+
 }
 
 function rectsHit(a, b) {
@@ -192,29 +203,26 @@ function togglePause() {
   if (game.state === "paused") {
     game.state = "countdown";
     game.countdown = 3;
-    keys.clear();
     return;
   }
   if (game.state === "countdown") {
     game.state = "paused";
     game.countdown = 0;
-    keys.clear();
     return;
   }
   game.state = "paused";
   game.countdown = 0;
-  keys.clear();
 }
 
 function pauseFromFocusLoss() {
+  if (!game.started) return;
   if (game.state !== "playing" && game.state !== "countdown") return;
   game.state = "paused";
   game.countdown = 0;
-  keys.clear();
 }
 
 function getAltitude() {
-  return Math.max(0, Math.floor(((220 - game.player.y) / 10) * 3.28084));
+  return Math.max(0, Math.floor(((220 - game.player.y) / 10) * 3.28084)) - 7;
 }
 
 function makePlatform(y, index) {
@@ -266,6 +274,13 @@ function getPlatformSegments(platform) {
   ];
 }
 
+function getRandomNumber(min = 0, max = 0, isInt = false) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    let num = (Math.random() * (max - min + 1)) + min;
+    return (isInt) ? Math.round(num) : num
+}
+
 function makeRescuePlatform(platform, index) {
   const width = 42;
   const minGap = 72;
@@ -304,12 +319,11 @@ function getLowestCatchablePlatformY() {
   return lowest;
 }
 
+
 function maybeAddHealthPickup(platform, index) {
   if (index < 3) return;
   if (game.player.health >= game.player.maxHealth) return;
-  const altitude = Math.max(0, Math.floor(((220 - platform.y) / 10) * 3.28084));
-  const interval = 5 + Math.floor(altitude / 70);
-  if (index % interval === 2) {
+  if (randomChance(10)) {
     game.pickups.push({
       x: platform.x + platform.w / 2 - 7,
       y: platform.y - 20,
@@ -319,6 +333,8 @@ function maybeAddHealthPickup(platform, index) {
       floating: false
     });
   }
+  const altitude = Math.max(0, Math.floor(((220 - platform.y) / 10) * 3.28084));
+  const interval = 5 + Math.floor(altitude / 70);
   const airInterval = interval + 3;
   if (index > 5 && index % airInterval === 4) {
     const sideOffset = rand(index + 405) > 0.5 ? -28 : 28;
@@ -384,7 +400,7 @@ function endRun(reason) {
 
 function trySpawnBatman() {
   if (game.batman || game.batmanCooldown > 0 || getAltitude() < 200) return;
-  if (rand(performance.now() + getAltitude() * 17) >= 0.01) return;
+  if (rand(performance.now() + getAltitude() * 17) >= 0.005) return;
   const direction = rand(performance.now() + 31) > 0.5 ? 1 : -1;
   game.batman = {
     x: direction > 0 ? -70 : W + 28,
@@ -471,9 +487,9 @@ function spawnGust() {
 
 function updatePlayer(dt) {
   const p = game.player;
-  const left = keys.has("ArrowLeft") || keys.has("KeyA");
-  const right = keys.has("ArrowRight") || keys.has("KeyD");
-  const jump = keys.has("Space") || keys.has("ArrowUp") || keys.has("KeyW");
+  const left = Input.arrowleft.pressed || Input.a.pressed;
+  const right = Input.arrowright.pressed || Input.d.pressed
+  const jump = Input.space.pressed || Input.arrowup.pressed || Input.w.pressed;
   const accel = p.grounded ? 32 : 20;
   const drag = p.grounded ? 0.78 : 0.94;
 
@@ -1109,8 +1125,8 @@ function drawOverlay() {
   }
   if (!game.started) {
     drawPixelText("FIRE ESCAPE", W / 2, 76, 3, "#ff3b30", "center");
-    drawPixelText("MOVE: A/D OR ARROWS", W / 2, 120, 2, "#a8fff1", "center");
-    drawPixelText("JUMP: SPACE / W / UP", W / 2, 144, 2, "#a8fff1", "center");
+    drawPixelText("MOVE: A/D OR LEFT ARROW/RIGHT ARROW", W / 2, 120, 2, "#a8fff1", "center");
+    drawPixelText("JUMP: SPACE / W / UP ARROW", W / 2, 144, 2, "#a8fff1", "center");
   }
   if (game.messageTimer > 0) {
     drawPixelText(game.message, W / 2, 54, 3, "#fff0a8", "center");
@@ -1144,42 +1160,6 @@ function loop(time) {
   requestAnimationFrame(loop);
 }
 
-window.addEventListener("keydown", (event) => {
-  if (["ArrowLeft", "ArrowRight", "ArrowUp", "Space", "KeyP"].includes(event.code)) event.preventDefault();
-  canvas.focus({ preventScroll: true });
-  if (game.state === "gameover" && ["KeyR", "Space", "Enter"].includes(event.code)) {
-    reset();
-    return;
-  }
-  if (event.code === "KeyP" && !event.repeat) {
-    togglePause();
-    return;
-  }
-  if (game.state !== "playing") return;
-  keys.add(event.code);
-  if (audio.context?.state === "suspended") audio.context.resume();
-});
-
-window.addEventListener("keyup", (event) => {
-  keys.delete(event.code);
-});
-
-for (const button of document.querySelectorAll(".touch-button")) {
-  const code = button.dataset.key;
-  const press = (event) => {
-    event.preventDefault();
-    keys.add(code);
-  };
-  const release = (event) => {
-    event.preventDefault();
-    keys.delete(code);
-  };
-  button.addEventListener("pointerdown", press);
-  button.addEventListener("pointerup", release);
-  button.addEventListener("pointercancel", release);
-  button.addEventListener("pointerleave", release);
-}
-
 muteButton.addEventListener("click", () => {
   muted = !muted;
   muteButton.textContent = muted ? "×" : "♪";
@@ -1209,3 +1189,10 @@ bestEl.textContent = `${bestHeight}ft`;
 updateHealthDisplay();
 canvas.focus({ preventScroll: true });
 requestAnimationFrame(loop);
+
+Input.p.onPress(togglePause);
+Input.r.onPress(function () {
+    if (game.state === "gameover") {
+        reset()
+    }
+})
