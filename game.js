@@ -109,10 +109,7 @@ function rand(n) {
 }
 
 function randomChance(chance) {
-    if (getRandomNumber(0, 100) <= chance) {
-        return true;
-    }
-    return false;
+    return (getRandomNumber(0, 100) <= chance);
 }
 
 function reset() {
@@ -186,7 +183,6 @@ function reset() {
     var temp = getRandomNumber(1000, 9999)
   } while (temp == rngSeed)
   rngSeed = temp;
-
 }
 
 function rectsHit(a, b) {
@@ -571,7 +567,7 @@ function updatePigeon(dt) {
   const p = game.player;
   const altitude = Math.min(500, getAltitude());
   const speed = 0.013 + Math.min(0.072, altitude / 10666.67);
-  const topSpeed = 1.18 + Math.min(3.85, altitude / 273.33);
+  const topSpeed = 1.18 + Math.min(3.85, altitude / 230);
 
   if (bird.mode === "stunned") {
     bird.stunned -= dt;
@@ -707,7 +703,7 @@ function updateBatman(dt) {
 function updateHazards(dt) {
   if (game.started) {
     game.spawnTimer -= dt;
-    if (game.spawnTimer <= 0 && !game.complete) spawnWarning();
+    if (game.spawnTimer <= 0 && !game.complete && randomChance(50)) spawnWarning();
   }
 
   for (let i = game.warnings.length - 1; i >= 0; i--) {
