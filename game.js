@@ -162,13 +162,13 @@ function reset() {
     warnings: [],
     conditioners: [],
     gusts: [],
-    batman: null,
+    hobo: null,
     particles: [],
     spawnTimer: 2.1,
     gustTimer: 1.2,
-    batmanCheckTimer: 0,
-    batmanNextHeight: 100,
-    batmanCooldown: 0,
+    hoboCheckTimer: 0,
+    hoboNextHeight: 100,
+    hoboCooldown: 0,
     stats: {
       hazardsDodged: 0,
       pickupsCollected: 0
@@ -394,15 +394,15 @@ function endRun(reason) {
   audio.beep(92, 0.18, "sawtooth", 0.04);
 }
 
-function trySpawnBatman() {
-  if (game.batman || game.batmanCooldown > 0 || getAltitude() < 200) return;
+function trySpawnHobo() {
+  if (game.hobo || game.hoboCooldown > 0) return;
   if (rand(performance.now() + getAltitude() * 17) >= 0.005) return;
   const direction = rand(performance.now() + 31) > 0.5 ? 1 : -1;
-  game.batman = {
+  game.hobo = {
     x: direction > 0 ? -70 : W + 28,
-    y: game.player.y + game.player.h / 2 - 9,
-    w: 58,
-    h: 18,
+    y: game.player.y - 40 + getRandomNumber(-20, 20),
+    w: 44,
+    h: 44,
     vx: direction * 430,
     direction,
     flap: 0,
@@ -666,36 +666,36 @@ function updatePlatforms(dt) {
   }
 }
 
-function updateBatman(dt) {
+function updateHobo(dt) {
   if (!game.started) return;
-  game.batmanCooldown = Math.max(0, game.batmanCooldown - dt);
+  game.hoboCooldown = Math.max(0, game.hoboCooldown - dt);
 
-  if (!game.batman) {
-    game.batmanCheckTimer += dt;
-    if (game.batmanCheckTimer >= 10) {
-      game.batmanCheckTimer = 0;
-      trySpawnBatman();
+  if (!game.hobo) {
+    game.hoboCheckTimer += dt;
+    if (game.hoboCheckTimer >= 10) {
+      game.hoboCheckTimer = 0;
+      trySpawnHobo();
     }
-    while (getAltitude() >= game.batmanNextHeight) {
-      game.batmanNextHeight += 100;
-      trySpawnBatman();
+    while (getAltitude() >= game.hoboNextHeight) {
+      game.hoboNextHeight += 200;
+      trySpawnHobo();
     }
     return;
   }
 
-  const batman = game.batman;
-  batman.y += (game.player.y + game.player.h / 2 - batman.h / 2 - batman.y) * 0.35;
-  batman.x += batman.vx * dt;
-  batman.flap += dt * 12;
-  const crossedPlayer = batman.direction > 0 ? batman.x + batman.w >= game.player.x : batman.x <= game.player.x + game.player.w;
-  if (rectsHit(batman, game.player) || (batman.guaranteed && crossedPlayer)) {
-    knockPlayerOffMap(batman.x + batman.w / 2);
+  const hobo = game.hobo;
+  hobo.y += getRandomNumber(-1, 1);
+  hobo.x += hobo.vx * dt;
+  hobo.flap += dt * 12;
+  const crossedPlayer = hobo.direction > 0 ? hobo.x + hobo.w >= game.player.x : hobo.x <= game.player.x + game.player.w;
+  if (rectsHit(hobo, game.player) || (hobo.guaranteed && crossedPlayer)) {
+    knockPlayerOffMap(hobo.x + hobo.w / 2);
   }
-  if (batman.x < -110 || batman.x > W + 110) {
-    game.batman = null;
+  if (hobo.x < -110 || hobo.x > W + 110) {
+    game.hobo = null;
     if (!game.player.knockedOff) {
       game.stats.hazardsDodged += 1;
-      game.batmanCooldown = 100;
+      game.hoboCooldown = 100;
     }
   }
 }
@@ -824,7 +824,7 @@ function update(dt) {
   updatePigeon(dt);
   updatePickups(dt);
   updateHazards(dt);
-  updateBatman(dt);
+  updateHobo(dt);
   updateParticles(dt);
   const targetY = game.player.y - 150;
   cameraY += (targetY - cameraY) * 0.08;
@@ -1015,24 +1015,56 @@ function drawPigeon() {
   drawRect(bird.x + 12, bird.y + 13, 2, 3, "#db8c56");
 }
 
-function drawBatman() {
-  const batman = game.batman;
-  if (!batman) return;
-  const y = batman.y + Math.sin(batman.flap) * 2;
-  const sx = batman.x;
-  const bodyX = sx + batman.w / 2 - 5;
-  drawRect(sx + 2, y + 8, 18, 4, "#05070d");
-  drawRect(sx + 38, y + 8, 18, 4, "#05070d");
-  drawRect(sx + 9, y + 5, 14, 5, "#0c1020");
-  drawRect(sx + 35, y + 5, 14, 5, "#0c1020");
-  drawRect(bodyX, y + 4, 10, 12, "#161a2a");
-  drawRect(bodyX + 2, y + 1, 6, 5, "#070a12");
-  drawRect(bodyX + 1, y, 2, 3, "#070a12");
-  drawRect(bodyX + 7, y, 2, 3, "#070a12");
-  drawRect(bodyX + (batman.direction > 0 ? 8 : 0), y + 4, 3, 3, "#f2d98b");
-  drawRect(sx + 15, y + 12, 28, 6, "#070a12");
-}
+function drawHobo() {
+    const hobo = game.hobo;
+    if (!hobo) return;
 
+    const x = hobo.x;
+    const y = hobo.y;
+
+    // Body / coat
+    drawRect(x + 8, y + 14, 24, 20, "#4b3a2a");
+
+    // Torn coat edges
+    drawRect(x + 6, y + 30, 6, 6, "#2e2419");
+    drawRect(x + 28, y + 30, 6, 6, "#2e2419");
+
+    // Coat patches
+    drawRect(x + 12, y + 20, 6, 6, "#8a6a45");
+    drawRect(x + 24, y + 24, 5, 5, "#8a6a45");
+
+    // Head
+    drawRect(x + 12, y + 2, 16, 16, "#d2b08c");
+
+    // Hat brim
+    drawRect(x + 8, y, 24, 4, "#222");
+
+    // Hat top
+    drawRect(x + 12, y - 6, 16, 8, "#333");
+
+    // Eyes
+    drawRect(x + 15, y + 7, 2, 2, "#000");
+    drawRect(x + 23, y + 7, 2, 2, "#000");
+
+    // Beard
+    drawRect(x + 14, y + 12, 12, 6, "#4a2f1b");
+
+    // Left arm
+    drawRect(x + 2, y + 16, 6, 14, "#4b3a2a");
+
+    // Right arm
+    drawRect(x + 32, y + 16, 6, 14, "#4b3a2a");
+
+    // Stick
+    drawRect(x + 36, y + 4, 3, 24, "#6b4a2d");
+
+    // Sack
+    drawRect(x + 34, y - 2, 10, 10, "#7a5a3a");
+
+    // Legs
+    drawRect(x + 12, y + 34, 6, 10, "#222");
+    drawRect(x + 22, y + 34, 6, 10, "#222");
+}
 function drawPickups() {
   for (const pickup of game.pickups) {
     const y = pickup.y + Math.sin(pickup.bob) * 2;
@@ -1143,7 +1175,7 @@ function render() {
   drawParticles();
   drawPlayer();
   drawPigeon();
-  drawBatman();
+  drawHobo();
   drawOverlay();
   ctx.restore();
 }
